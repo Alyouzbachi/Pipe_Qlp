@@ -1,0 +1,138 @@
+
+/*
+ * Copyright © 2002 Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
+ * California 95054, U.S.A. All rights reserved.  Sun Microsystems, Inc. has
+ * intellectual property rights relating to technology embodied in the product
+ * that is described in this document. In particular, and without limitation,
+ * these intellectual property rights may include one or more of the U.S.
+ * patents listed at http://www.sun.com/patents and one or more additional
+ * patents or pending patent applications in the U.S. and in other countries.
+ * U.S. Government Rights - Commercial software. Government users are subject
+ * to the Sun Microsystems, Inc. standard license agreement and applicable
+ * provisions of the FAR and its supplements.  Use is subject to license terms.
+ * Sun,  Sun Microsystems,  the Sun logo and  Java are trademarks or registered
+ * trademarks of Sun Microsystems, Inc. in the U.S. and other countries.  This
+ * product is covered and controlled by U.S. Export Control laws and may be
+ * subject to the export or import laws in other countries.  Nuclear, missile,
+ * chemical biological weapons or nuclear maritime end uses or end users,
+ * whether direct or indirect, are strictly prohibited.  Export or reexport
+ * to countries subject to U.S. embargo or to entities identified on U.S.
+ * export exclusion lists, including, but not limited to, the denied persons
+ * and specially designated nationals lists is strictly prohibited.
+ */
+
+
+options {
+  LOOKAHEAD = 17;
+  CHOICE_AMBIGUITY_CHECK = 2;
+  OTHER_AMBIGUITY_CHECK = 1;
+  STATIC = false;
+  DEBUG_PARSER = false;
+  DEBUG_LOOKAHEAD = false;
+  DEBUG_TOKEN_MANAGER = false;
+  ERROR_REPORTING = true;
+  JAVA_UNICODE_ESCAPE = false;
+  UNICODE_INPUT = false;
+  IGNORE_CASE = false;
+  USER_TOKEN_MANAGER = false;
+  USER_CHAR_STREAM = false;
+  BUILD_PARSER = true;
+  BUILD_TOKEN_MANAGER = true;
+  SANITY_CHECK = true;
+  FORCE_LA_CHECK = false;
+  TOKEN_FACTORY = "Token";
+  MULTI=true;
+  VISITOR=true;
+  NODE_DEFAULT_VOID=true;
+  NODE_EXTENDS="BaseNode";
+
+}
+
+PARSER_BEGIN(Parser)
+
+package javacc;
+public class Parser { 
+  public static void main(String args[]) throws Exception {
+  
+  }
+
+}
+
+PARSER_END(Parser)
+
+SKIP :
+{
+  " "
+| "\t"
+| "\n"
+| "\r"
+| "\f"
+}
+
+TOKEN [IGNORE_CASE]:
+{
+    < GLOBAL: ("GLOBALLY"|"G")>
+|   < FUTURE: ("FINALLY"|"EVENTUALLY"|"F")>
+|   < NEXT: ("NEXT"|"X")>
+|   < UNTIL: ("UNTIL"|"U")>
+|   < ALL: ("ALL" | "A")>
+|   < EXIST: "EXIST" | "E">
+|   < LIVE: "LIVE" | "L">
+|   < DEADLOCK: "DEADLOCK" | "D">
+}
+
+TOKEN:
+{
+    < AND: ("and"|"^"|"&") >
+|   < OR: ("or"|"|") >
+|   < NOT: ("not"|"~"|"!") >
+}
+ 
+TOKEN:
+{
+    < PLACE: <NAME> (<NUMBER>)? >
+|   < NAME: (["a"-"z"])+ >
+|   < NUMBER: (["0"-"9"])+ >
+}
+
+
+ASTStart Start()#Start: {} {(    MultiStatement()
+                            |   Statement()
+                            |   <LIVE>  #Lstatement
+                            |   <DEADLOCK> #Dstatement  )
+
+{return jjtThis;}}
+
+void Statement()#Statement:{} { (Not())? All()
+                    |  (Not())? Exist()
+                    |   State()
+                    }
+
+void MultiStatement() #MultiStatement: {}   {Statement() (And() Statement())+
+                                         |   Statement() (Or() Statement())+ }
+
+void All() #AllStatement: {} {<ALL> "(" State() ")"}
+
+void Exist() #Estatement: {} {   <EXIST> "(" State() ")"
+                            |   <EXIST> Places()
+                            }
+
+void And() #And: {} {<AND>}
+
+void Or() #Or: {} {<OR>}
+
+void Not() #Not: {} {<NOT>}
+
+void State(): {} { Next()   |Globally() |Finaly()   |Until()}
+
+void Next()#Next: {}  {  Places () <NEXT> Places() |   <NEXT> Places()  }
+
+void Globally()#Globally: {}  {  Places () <GLOBAL> Places() |   <GLOBAL> Places()  }
+
+void Finaly()#Finaly: {}  {  Places () <FUTURE> Places() |   <FUTURE> Places()  }
+
+void Until()#Until: {}  {  Places () <UNTIL> Places()    }
+
+void Places() #Places: {}  { "[" Place() ( <AND> Place() )* "]" | Place() }
+
+void Place(): {}  {   <PLACE> {jjtThis.data.put("place",token.image);}#placename}
